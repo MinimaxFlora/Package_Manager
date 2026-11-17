@@ -140,14 +140,36 @@ jobs:
           echo "Arch    : ${ARCH}"
           echo "Drop    : ${GROUP_DROP_PKGS:-<none>}"
 
+      - name: Resolve SDK image tag
+        id: sdk
+        env:
+          VER: ${{ needs.prepare.outputs.version }}
+          SERIES: ${{ needs.prepare.outputs.series }}
+        run: |
+          set -euo pipefail
+          # immortalwrt/sdk 里只有「点版本」镜像（如 -openwrt-25.12.0）带 luci 的 po2lmo，
+          # 「系列」镜像（如 -openwrt-25.12）没有，会害得 luci-app-openclash Error 127。
+          for cand in "${VER}" "${SERIES}.0" "${SERIES}"; do
+            tag="${ARCH}-openwrt-${cand}"
+            code=$(curl -s -o /dev/null -w '%{http_code}' --retry 3 --retry-all-errors \
+              "https://hub.docker.com/v2/repositories/immortalwrt/sdk/tags/${tag}")
+            echo "try ${tag} -> ${code}"
+            if [ "${code}" = "200" ]; then
+              echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+              echo "使用 SDK 镜像: immortalwrt/sdk:${tag}"
+              exit 0
+            fi
+          done
+          echo "::error::immortalwrt/sdk 找不到 ${ARCH} 可用的镜像 tag（试过 ${VER} / ${SERIES}.0 / ${SERIES}）"
+          exit 1
+
       - name: Build packages (apk only)
         uses: MinimaxFlora/gh-action-sdk@go1.27
         env:
-          # 用 ImmortalWrt 的 SDK 镜像：官方 ghcr.io/openwrt/sdk 里没有 luci 的主机工具
-          # po2lmo，luci-app-openclash 的 Build/Prepare 会直接 Error 127。
-          # ImmortalWrt 镜像自带 po2lmo，且同为 OpenWrt 25.12 系列，apk 可直接装到 25.12.x。
+          # 官方 ghcr.io/openwrt/sdk 里没有 po2lmo（luci 的主机工具），openclash 的
+          # Build/Prepare 会直接 Error 127；ImmortalWrt 的点版本镜像自带 po2lmo。
           CONTAINER: immortalwrt/sdk
-          ARCH: ${{ matrix.arch }}-openwrt-${{ needs.prepare.outputs.series }}
+          ARCH: ${{ steps.sdk.outputs.tag }}
           FEEDNAME: packages_ci
           NO_REFRESH_CHECK: true
           IGNORE_ERRORS: true
