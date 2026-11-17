@@ -110,29 +110,6 @@
     "targets": ["nikki", "mihomo-meta", "luci-app-nikki"]
   },
   {
-    "key": "helloworld",
-    "label": "HelloWorld 代理内核组件",
-    "slug": "helloworld",
-    "targets": [
-      "chinadns-ng",
-      "dns2socks",
-      "ipt2socks",
-      "microsocks",
-      "tcping",
-      "xray-core",
-      "xray-plugin",
-      "sing-box",
-      "hysteria",
-      "naiveproxy",
-      "shadowsocks-rust",
-      "shadowsocksr-libev",
-      "shadow-tls",
-      "simple-obfs",
-      "v2ray-geodata",
-      "v2ray-plugin"
-    ]
-  },
-  {
     "key": "diskman",
     "label": "DiskMan 磁盘管理工具",
     "slug": "diskman",

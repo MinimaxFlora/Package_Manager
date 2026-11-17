@@ -82,7 +82,6 @@ ls /tmp/theme-aurora/*.apk
 | PassWall 代理插件 | `passwall` | luci-app-passwall, chinadns-ng, dns2socks, ipt2socks, microsocks, tcping, xray-core, xray-plugin, sing-box, hysteria, naiveproxy, geoview, shadowsocks-rust, shadowsocksr-libev, shadow-tls, simple-obfs, v2ray-geodata, v2ray-plugin |
 | PassWall2 代理插件 | `passwall2` | luci-app-passwall2, chinadns-ng, tcping, xray-core, xray-plugin, sing-box, geoview, shadowsocks-rust, shadowsocksr-libev, simple-obfs, v2ray-geodata, v2ray-plugin |
 | Nikki 代理插件（nikki + mihomo 内核） | `nikki` | nikki, mihomo-meta, luci-app-nikki |
-| HelloWorld 代理内核组件 | `helloworld` | chinadns-ng, dns2socks, ipt2socks, microsocks, tcping, xray-core, xray-plugin, sing-box, hysteria, naiveproxy, shadowsocks-rust, shadowsocksr-libev, shadow-tls, simple-obfs, v2ray-geodata, v2ray-plugin |
 | DiskMan 磁盘管理工具 | `diskman` | luci-app-diskman |
 | MentoHUST 认证 | `mentohust` | luci-app-mentohust, mentohust |
 | Quickfile 文件管理 | `quickfile` | luci-app-quickfile, quickfile |
@@ -141,7 +140,8 @@ python3 tools/check-artifacts.py \
 - Fluent 主题与 Fluent Lite 主题互斥，只能选其中一个分组安装。
 - 分组里的 LuCI 包通常是 `noarch`，可以跨架构安装；带二进制的插件必须匹配架构。
 - 安装时会从固件现有软件源补齐外部依赖（如 `luci-base`），请确保设备能访问软件源。
-- 代理插件分组只包含 LuCI 界面和仓库内的依赖；代理内核（xray、sing-box、hysteria 等）请另外安装 `HelloWorld 代理内核组件`，或使用固件软件源里的版本。
+- 代理插件分组已经把该插件自己需要的内核/依赖（xray、sing-box、hysteria 等）一起打进去了，不用另外再装内核。
+- PassWall、PassWall2、Nikki、HomeProxy、OpenClash 之间会抢端口和配置，一台设备只选一个。
 - 多个代理/主题分组同时装到一台设备上可能在运行期互相抢占端口，按分组单独刷入更稳。
 - SDK 侧开了 `IGNORE_ERRORS`，单个包编译失败不会当场中断；工作流的 `check-artifacts.py` 兜底，所选分组只要有一个构建目标没产出 apk 就判定失败。
 - 构建产物未签名，安装时统一使用 `--allow-untrusted`。

@@ -22,7 +22,6 @@ on:
           - "PassWall 代理插件"
           - "PassWall2 代理插件"
           - "Nikki 代理插件（nikki + mihomo 内核）"
-          - "HelloWorld 代理内核组件"
           - "DiskMan 磁盘管理工具"
           - "MentoHUST 认证"
           - "Quickfile 文件管理"
