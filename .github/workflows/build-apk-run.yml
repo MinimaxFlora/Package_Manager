@@ -62,6 +62,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.detect.outputs.version }}
+      series: ${{ steps.detect.outputs.series }}
       arches: ${{ steps.detect.outputs.arches }}
     steps:
       - name: Detect OpenWrt apk version and architectures
@@ -92,8 +93,9 @@ jobs:
             *) echo "::error::不支持的架构: ${IN_ARCH}"; exit 1 ;;
           esac
           echo "version=${V}" >> "$GITHUB_OUTPUT"
+          echo "series=${V%.*}" >> "$GITHUB_OUTPUT"
           echo "arches=${ARCHES}" >> "$GITHUB_OUTPUT"
-          echo "OpenWrt ${V}, arches ${ARCHES}"
+          echo "OpenWrt ${V} (series ${V%.*}), arches ${ARCHES}"
 
   build:
     name: Build ${{ matrix.arch }} @ ${{ needs.prepare.outputs.version }}
@@ -141,7 +143,11 @@ jobs:
       - name: Build packages (apk only)
         uses: MinimaxFlora/gh-action-sdk@go1.27
         env:
-          ARCH: ${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          # 用 ImmortalWrt 的 SDK 镜像：官方 ghcr.io/openwrt/sdk 里没有 luci 的主机工具
+          # po2lmo，luci-app-openclash 的 Build/Prepare 会直接 Error 127。
+          # ImmortalWrt 镜像自带 po2lmo，且同为 OpenWrt 25.12 系列，apk 可直接装到 25.12.x。
+          CONTAINER: immortalwrt/sdk
+          ARCH: ${{ matrix.arch }}-openwrt-${{ needs.prepare.outputs.series }}
           FEEDNAME: packages_ci
           NO_REFRESH_CHECK: true
           IGNORE_ERRORS: true
