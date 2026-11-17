@@ -1,12 +1,5 @@
 [
   {
-    "key": "all",
-    "label": "全部插件（一次编译所有插件）",
-    "slug": "all",
-    "targets": [],
-    "exclude": ["luci-theme-fluent-lite"]
-  },
-  {
     "key": "argon",
     "label": "Argon 主题",
     "slug": "theme-argon",
@@ -40,10 +33,7 @@
     "key": "fluent",
     "label": "Fluent 主题",
     "slug": "theme-fluent",
-    "targets": [
-      "luci-theme-fluent",
-      "luci-mod-fluentdashboard"
-    ]
+    "targets": ["luci-theme-fluent", "luci-mod-fluentdashboard"]
   },
   {
     "key": "fluent-lite",
@@ -74,6 +64,7 @@
     "label": "PassWall 代理插件",
     "slug": "passwall",
     "targets": [
+      "luci-app-passwall",
       "chinadns-ng",
       "dns2socks",
       "ipt2socks",
@@ -90,8 +81,7 @@
       "shadow-tls",
       "simple-obfs",
       "v2ray-geodata",
-      "v2ray-plugin",
-      "luci-app-passwall",
+      "v2ray-plugin"
     ]
   },
   {
@@ -99,6 +89,7 @@
     "label": "PassWall2 代理插件",
     "slug": "passwall2",
     "targets": [
+      "luci-app-passwall2",
       "chinadns-ng",
       "tcping",
       "xray-core",
@@ -109,8 +100,7 @@
       "shadowsocksr-libev",
       "simple-obfs",
       "v2ray-geodata",
-      "v2ray-plugin",
-      "luci-app-passwall2",
+      "v2ray-plugin"
     ]
   },
   {

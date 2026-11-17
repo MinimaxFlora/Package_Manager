@@ -53,10 +53,17 @@ def render_install_script(label, arch, version, build_time):
 
 
 def resolve_makeself(value):
-    if os.sep in value:
+    if os.sep in value or "/" in value:
         return value
     found = shutil.which(value)
     return found or value
+
+
+def makeself_argv(makeself):
+    """makeself.sh 在没有执行位（Windows/解压出来的文件）时用 sh 拉起。"""
+    if os.name != "posix" or not os.access(makeself, os.X_OK):
+        return ["sh", makeself]
+    return [makeself]
 
 
 def main():
@@ -69,7 +76,8 @@ def main():
     ap.add_argument("--version", required=True, help="OpenWrt 版本，例如 25.12.6")
     ap.add_argument("--makeself", default="makeself", help="makeself 可执行文件路径")
     ap.add_argument("--complevel", default="", help="gzip 压缩级别（1-9，留空使用 makeself 默认值）")
-    ap.add_argument("--no-copy-apks", action="store_true", help="不把原始 .apk 复制到输出目录")
+    ap.add_argument("--copy-apks", action="store_true",
+                    help="额外把原始 .apk 复制到 <out-dir>/apk（默认不复制，Release 里只放 .run）")
     args = ap.parse_args()
 
     apks = sorted(glob.glob(os.path.join(args.apk_dir, "*.apk")))
@@ -78,7 +86,10 @@ def main():
         return 1
 
     makeself = resolve_makeself(args.makeself)
-    if not (os.path.isfile(makeself) and os.access(makeself, os.X_OK)):
+    if not os.path.isfile(makeself):
+        print(f"ERROR: 找不到 makeself: {makeself}", file=sys.stderr)
+        return 1
+    if os.name == "posix" and not os.access(makeself, os.X_OK):
         print(f"ERROR: makeself 不可执行: {makeself}", file=sys.stderr)
         return 1
 
@@ -114,8 +125,7 @@ def main():
         with open(os.path.join(args.out_dir, out_name + ".manifest.txt"), "w", encoding="utf-8") as f:
             f.write(manifest_text)
 
-        cmd = [
-            makeself,
+        cmd = makeself_argv(makeself) + [
             "--needroot",
             "--nox11",
             "--sha256",
@@ -138,7 +148,7 @@ def main():
         with open(out_path + ".sha256", "w", encoding="utf-8") as f:
             f.write(f"{digest}  {out_name}\n")
 
-        if not args.no_copy_apks:
+        if args.copy_apks:
             apk_out = os.path.join(args.out_dir, "apk")
             os.makedirs(apk_out, exist_ok=True)
             for path in apks:

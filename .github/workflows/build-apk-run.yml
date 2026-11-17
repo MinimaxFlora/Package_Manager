@@ -22,6 +22,7 @@ on:
           - "PassWall 代理插件"
           - "PassWall2 代理插件"
           - "Nikki 代理插件（nikki + mihomo 内核）"
+          - "HelloWorld 代理内核组件"
           - "DiskMan 磁盘管理工具"
           - "MentoHUST 认证"
           - "Quickfile 文件管理"
@@ -112,13 +113,13 @@ jobs:
         uses: sbwml/actions@free-disk
 
       - name: Checkout openwrt_package as feed
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: MinimaxFlora/openwrt_package
           fetch-depth: 0
 
       - name: Checkout Package_Manager tooling
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: pm
 
@@ -167,40 +168,16 @@ jobs:
         run: |
           set -uo pipefail
           rc=0
-          if [ -x staging_dir/host/bin/apk ]; then
-            python3 tools/check-artifacts.py release "$PACKAGES" \
-              --apk staging_dir/host/bin/apk || rc=$?
-          elif docker image inspect sdk >/dev/null 2>&1; then
-            docker run --rm --entrypoint bash \
-              -v "$PWD:/w" -e PACKAGES="$PACKAGES" sdk -lc '
-                set -u
-                APK=""
-                if [ -x ./staging_dir/host/bin/apk ]; then
-                  APK="$PWD/staging_dir/host/bin/apk"
-                elif APK=$(command -v apk 2>/dev/null); then
-                  :
-                else
-                  APK=$(find / -maxdepth 6 -type f -name apk -perm -u+x 2>/dev/null | head -1)
-                fi
-                if [ -z "$APK" ]; then
-                  echo "::warning::SDK 镜像里找不到 apk 工具"
-                  exit 3
-                fi
-                python3 /w/tools/check-artifacts.py /w/release "$PACKAGES" --apk "$APK"
-              '
-            rc=$?
-          else
-            echo "::warning::找不到 apk 工具，跳过产物来源校验"
-          fi
+          python3 pm/tools/check-artifacts.py \
+            --lock ./packages.lock.json \
+            --apk-dir release \
+            --targets "$PACKAGES" || rc=$?
           if [ "$rc" -eq 1 ]; then
-            if [ "${GROUP_KEY}" = "all" ]; then
-              echo "::warning::有构建目标没有产出 apk（全部插件模式下允许部分失败），仍会打包已产出的 apk"
-            else
-              echo "::error::所选分组有构建目标没有产出 apk，请查看 build-logs artifact 里的编译错误"
-              exit 1
-            fi
+            echo "::error::所选分组有构建目标没有产出 apk，请查看 Build 步骤的编译日志"
+            exit 1
           elif [ "$rc" -ne 0 ]; then
-            echo "::warning::产物来源校验返回 $rc，已跳过（不影响打包）"
+            echo "::error::产物校验脚本返回 $rc（2=数据/路径问题），请检查 packages.lock.json 与 PACKAGES"
+            exit 1
           fi
 
       - name: Install makeself
@@ -231,7 +208,7 @@ jobs:
 
       - name: Upload installer artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apk-run-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
           path: out
@@ -239,7 +216,7 @@ jobs:
 
       - name: Upload build logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-logs-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
           path: logs
@@ -255,17 +232,30 @@ jobs:
         arch: ${{ fromJSON(needs.prepare.outputs.arches) }}
     steps:
       - name: Download installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: apk-run-${{ matrix.arch }}-*
           merge-multiple: true
           path: assets
 
-      - name: List assets
-        run: find assets -maxdepth 3 -type f | sort
+      - name: Collect .run installers
+        id: collect
+        run: |
+          set -euo pipefail
+          mkdir -p run-only
+          found=0
+          while IFS= read -r f; do
+            cp -v "$f" run-only/
+            found=$((found + 1))
+          done < <(find assets -type f -name '*.run')
+          if [ "$found" -eq 0 ]; then
+            echo "::error::本次构建没有产出任何 .run 安装包，跳过发布（请先看 Build 任务的报错）"
+            exit 1
+          fi
+          ls -lh run-only
 
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: apk-${{ matrix.arch }}
           name: APK ${{ matrix.arch }}
@@ -276,20 +266,16 @@ jobs:
             - OpenWrt 版本: `${{ needs.prepare.outputs.version }}`
             - 插件分组: `${{ inputs.group }}`
 
-            设备上以 root 执行即可安装：
+            下载对应分组的 `.run`，在设备上以 root 执行即可：
 
             ```sh
-            sh <文件名>.run
+            sh <分组>-<架构>-<版本>.run
             ```
 
-            也可以直接安装压缩包里的 apk：
-
-            ```sh
-            apk add --allow-untrusted <文件名>.apk
-            ```
-
-            这些 apk 由本地 SDK 构建、未签名，所以安装时需要 `--allow-untrusted`。
+            安装脚本内部执行的是 `apk add --allow-untrusted ./*.apk`；
+            这些 apk 由本地 SDK 构建、未签名，所以需要 `--allow-untrusted`。
+            需要单个 apk 时请到 Actions 运行页的 artifact 下载，Release 只放 `.run`。
           files: |
-            assets/**/*
-          fail_on_unmatched_files: false
+            run-only/**/*.run
+          fail_on_unmatched_files: true
           overwrite_files: true
