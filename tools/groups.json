@@ -1,0 +1,190 @@
+[
+  {
+    "key": "all",
+    "label": "全部插件（一次编译所有插件）",
+    "slug": "all",
+    "targets": [],
+    "exclude": ["luci-theme-fluent-lite"]
+  },
+  {
+    "key": "argon",
+    "label": "Argon 主题",
+    "slug": "theme-argon",
+    "targets": ["luci-theme-argon", "luci-app-argon-config"]
+  },
+  {
+    "key": "vantage",
+    "label": "Vantage 主题",
+    "slug": "theme-vantage",
+    "targets": ["luci-theme-vantage", "luci-app-vantage"]
+  },
+  {
+    "key": "aurora",
+    "label": "Aurora 主题",
+    "slug": "theme-aurora",
+    "targets": ["luci-theme-aurora", "luci-app-aurora-config"]
+  },
+  {
+    "key": "design",
+    "label": "Design 主题",
+    "slug": "theme-design",
+    "targets": ["luci-theme-design"]
+  },
+  {
+    "key": "shadcn",
+    "label": "Shadcn 主题",
+    "slug": "theme-shadcn",
+    "targets": ["luci-theme-shadcn"]
+  },
+  {
+    "key": "fluent",
+    "label": "Fluent 主题",
+    "slug": "theme-fluent",
+    "targets": [
+      "luci-theme-fluent",
+      "luci-mod-fluentdashboard"
+    ]
+  },
+  {
+    "key": "fluent-lite",
+    "label": "Fluent Lite 主题",
+    "slug": "theme-fluent-lite",
+    "targets": ["luci-theme-fluent-lite"]
+  },
+  {
+    "key": "mosdns",
+    "label": "Mosdns DNS 转换器",
+    "slug": "mosdns",
+    "targets": ["mosdns", "luci-app-mosdns", "v2ray-geodata", "geo2txt"]
+  },
+  {
+    "key": "openclash",
+    "label": "OpenClash 代理插件",
+    "slug": "openclash",
+    "targets": ["luci-app-openclash"]
+  },
+  {
+    "key": "homeproxy",
+    "label": "HomeProxy 代理插件",
+    "slug": "homeproxy",
+    "targets": ["luci-app-homeproxy"]
+  },
+  {
+    "key": "passwall",
+    "label": "PassWall 代理插件",
+    "slug": "passwall",
+    "targets": [
+      "luci-app-passwall",
+      "chinadns-ng",
+      "dns2socks",
+      "microsocks",
+      "tcping"
+    ]
+  },
+  {
+    "key": "passwall2",
+    "label": "PassWall2 代理插件",
+    "slug": "passwall2",
+    "targets": [
+      "luci-app-passwall2",
+      "tcping",
+      "geoview",
+      "v2ray-geodata"
+    ]
+  },
+  {
+    "key": "nikki",
+    "label": "Nikki 代理插件（nikki + mihomo 内核）",
+    "slug": "nikki",
+    "targets": ["nikki", "mihomo-meta", "luci-app-nikki"]
+  },
+  {
+    "key": "helloworld",
+    "label": "HelloWorld 代理内核组件",
+    "slug": "helloworld",
+    "targets": [
+      "chinadns-ng",
+      "dns2socks",
+      "ipt2socks",
+      "microsocks",
+      "tcping",
+      "xray-core",
+      "xray-plugin",
+      "sing-box",
+      "hysteria",
+      "naiveproxy",
+      "shadowsocks-rust",
+      "shadowsocksr-libev",
+      "shadow-tls",
+      "simple-obfs",
+      "v2ray-geodata",
+      "v2ray-plugin"
+    ]
+  },
+  {
+    "key": "diskman",
+    "label": "DiskMan 磁盘管理工具",
+    "slug": "diskman",
+    "targets": ["luci-app-diskman"]
+  },
+  {
+    "key": "mentohust",
+    "label": "MentoHUST 认证",
+    "slug": "mentohust",
+    "targets": ["luci-app-mentohust", "mentohust"]
+  },
+  {
+    "key": "quickfile",
+    "label": "Quickfile 文件管理",
+    "slug": "quickfile",
+    "targets": ["luci-app-quickfile", "quickfile"]
+  },
+  {
+    "key": "ramfree",
+    "label": "RamFree 内存清理",
+    "slug": "ramfree",
+    "targets": ["luci-app-ramfree"]
+  },
+  {
+    "key": "bandix",
+    "label": "Bandix-Plus 网络流量监控",
+    "slug": "bandix-plus",
+    "targets": ["luci-app-bandix-plus", "bandix-plus"]
+  },
+  {
+    "key": "openlist",
+    "label": "OpenList 网盘聚合工具",
+    "slug": "openlist",
+    "targets": ["luci-app-openlist2", "openlist2"]
+  },
+  {
+    "key": "airconnect",
+    "label": "AirConnect 音频服务",
+    "slug": "airconnect",
+    "targets": ["luci-app-airconnect", "airconnect"]
+  },
+  {
+    "key": "autocore",
+    "label": "Autocore 硬件信息",
+    "slug": "autocore",
+    "targets": ["autocore"]
+  },
+  {
+    "key": "socat",
+    "label": "Socat 端口转发",
+    "slug": "socat",
+    "targets": ["luci-app-socat"]
+  },
+  {
+    "key": "adguardhome",
+    "label": "AdGuardHome 广告拦截",
+    "slug": "adguardhome",
+    "targets": ["luci-app-adguardhome"]
+  },
+  {
+    "key": "geotools",
+    "label": "Geo 数据工具",
+    "slug": "geo-tools",
+    "targets": ["geoview", "geo2txt"]
+  }
+]
