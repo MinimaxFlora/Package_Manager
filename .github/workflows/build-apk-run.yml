@@ -1,0 +1,297 @@
+name: Build APK Run Installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      group:
+        description: "选择要编译的插件分组"
+        type: choice
+        required: true
+        default: "全部插件（一次编译所有插件）"
+        options:
+          - "全部插件（一次编译所有插件）"
+          - "Argon 主题"
+          - "Vantage 主题"
+          - "Aurora 主题"
+          - "Design 主题"
+          - "Shadcn 主题"
+          - "Fluent 主题"
+          - "Fluent Lite 主题"
+          - "Mosdns DNS 转换器"
+          - "OpenClash 代理插件"
+          - "HomeProxy 代理插件"
+          - "PassWall 代理插件"
+          - "PassWall2 代理插件"
+          - "Nikki 代理插件（nikki + mihomo 内核）"
+          - "HelloWorld 代理内核组件"
+          - "DiskMan 磁盘管理工具"
+          - "MentoHUST 认证"
+          - "Quickfile 文件管理"
+          - "RamFree 内存清理"
+          - "Bandix-Plus 网络流量监控"
+          - "OpenList 网盘聚合工具"
+          - "AirConnect 音频服务"
+          - "Autocore 硬件信息"
+          - "Socat 端口转发"
+          - "AdGuardHome 广告拦截"
+          - "Geo 数据工具"
+      version:
+        description: "OpenWrt 版本（留空=自动使用最新 apk 稳定版，例如 25.12.6）"
+        type: string
+        required: false
+        default: ""
+      arch:
+        description: "目标架构"
+        type: choice
+        required: true
+        default: "全部架构"
+        options:
+          - "全部架构"
+          - "x86_64"
+          - "aarch64_generic"
+          - "aarch64_cortex-a53"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-run-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      arches: ${{ steps.detect.outputs.arches }}
+    steps:
+      - name: Detect OpenWrt apk version and architectures
+        id: detect
+        env:
+          IN_VERSION: ${{ inputs.version }}
+          IN_ARCH: ${{ inputs.arch }}
+        run: |
+          set -euo pipefail
+          if [ -n "${IN_VERSION}" ]; then
+            V="${IN_VERSION}"
+          else
+            V="$(curl -fsS --retry 3 --retry-delay 3 https://downloads.openwrt.org/.versions.json \
+                 | python3 -c 'import json,sys; print(json.load(sys.stdin)["stable_version"])')"
+          fi
+          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::无效的 OpenWrt 版本: $V"
+            exit 1
+          fi
+          MAJOR="${V%%.*}"
+          if [ "$MAJOR" -lt 25 ]; then
+            echo "::error::OpenWrt ${V} 使用 opkg(ipk)，没有 apk 包。请选择 25.12 或更新版本。"
+            exit 1
+          fi
+          case "${IN_ARCH}" in
+            "全部架构") ARCHES='["x86_64","aarch64_generic","aarch64_cortex-a53"]' ;;
+            x86_64|aarch64_generic|aarch64_cortex-a53) ARCHES="[\"${IN_ARCH}\"]" ;;
+            *) echo "::error::不支持的架构: ${IN_ARCH}"; exit 1 ;;
+          esac
+          echo "version=${V}" >> "$GITHUB_OUTPUT"
+          echo "arches=${ARCHES}" >> "$GITHUB_OUTPUT"
+          echo "OpenWrt ${V}, arches ${ARCHES}"
+
+  build:
+    name: Build ${{ matrix.arch }} @ ${{ needs.prepare.outputs.version }}
+    needs: prepare
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.prepare.outputs.arches) }}
+    env:
+      ARCH: ${{ matrix.arch }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      GROUP_LABEL: ${{ inputs.group }}
+    steps:
+      - name: Free disk space
+        uses: sbwml/actions@free-disk
+
+      - name: Checkout openwrt_package as feed
+        uses: actions/checkout@v4
+        with:
+          repository: MinimaxFlora/openwrt_package
+          fetch-depth: 0
+
+      - name: Checkout Package_Manager tooling
+        uses: actions/checkout@v4
+        with:
+          path: pm
+
+      - name: Resolve selected group
+        run: |
+          set -euo pipefail
+          python3 pm/tools/resolve_group.py \
+            --src . \
+            --groups pm/tools/groups.json \
+            --label "${GROUP_LABEL}"
+
+      - name: Show selection
+        run: |
+          echo "Packages: ${PACKAGES}"
+          echo "Group   : ${GROUP_LABEL} (${GROUP_SLUG})"
+          echo "Version : ${VERSION}"
+          echo "Arch    : ${ARCH}"
+
+      - name: Build packages (apk only)
+        uses: MinimaxFlora/gh-action-sdk@go1.27
+        env:
+          ARCH: ${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          FEEDNAME: packages_ci
+          NO_REFRESH_CHECK: true
+          IGNORE_ERRORS: true
+
+      - name: Collect apk packages
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          if [ -d "bin/packages/${ARCH}/packages_ci" ]; then
+            find "bin/packages/${ARCH}/packages_ci" -maxdepth 1 -type f -name '*.apk' \
+              -exec cp -v {} release/ \;
+          fi
+          # autocore 属于 nonshared，产物落在 bin/targets 下
+          find bin/targets -type f -name 'autocore*.apk' -exec cp -v {} release/ \; 2>/dev/null || true
+          count=$(find release -maxdepth 1 -type f -name '*.apk' | wc -l)
+          echo "收集到 ${count} 个 apk"
+          ls -lh release/ || true
+          if [ "$count" -eq 0 ]; then
+            echo "::error::没有产出任何 .apk。请确认版本 ${VERSION} 使用 apk（OpenWrt 25.12+），以及所选分组在该架构上可编译。"
+            exit 1
+          fi
+
+      - name: Assert selected targets produced packages
+        run: |
+          set -uo pipefail
+          rc=0
+          if [ -x staging_dir/host/bin/apk ]; then
+            python3 tools/check-artifacts.py release "$PACKAGES" \
+              --apk staging_dir/host/bin/apk || rc=$?
+          elif docker image inspect sdk >/dev/null 2>&1; then
+            docker run --rm --entrypoint bash \
+              -v "$PWD:/w" -e PACKAGES="$PACKAGES" sdk -lc '
+                set -u
+                APK=""
+                if [ -x ./staging_dir/host/bin/apk ]; then
+                  APK="$PWD/staging_dir/host/bin/apk"
+                elif APK=$(command -v apk 2>/dev/null); then
+                  :
+                else
+                  APK=$(find / -maxdepth 6 -type f -name apk -perm -u+x 2>/dev/null | head -1)
+                fi
+                if [ -z "$APK" ]; then
+                  echo "::warning::SDK 镜像里找不到 apk 工具"
+                  exit 3
+                fi
+                python3 /w/tools/check-artifacts.py /w/release "$PACKAGES" --apk "$APK"
+              '
+            rc=$?
+          else
+            echo "::warning::找不到 apk 工具，跳过产物来源校验"
+          fi
+          if [ "$rc" -eq 1 ]; then
+            if [ "${GROUP_KEY}" = "all" ]; then
+              echo "::warning::有构建目标没有产出 apk（全部插件模式下允许部分失败），仍会打包已产出的 apk"
+            else
+              echo "::error::所选分组有构建目标没有产出 apk，请查看 build-logs artifact 里的编译错误"
+              exit 1
+            fi
+          elif [ "$rc" -ne 0 ]; then
+            echo "::warning::产物来源校验返回 $rc，已跳过（不影响打包）"
+          fi
+
+      - name: Install makeself
+        run: |
+          set -euo pipefail
+          if ! command -v makeself >/dev/null 2>&1; then
+            git clone --depth 1 https://github.com/megastep/makeself.git "$RUNNER_TEMP/makeself"
+          fi
+
+      - name: Build make-self-extracting .run installer
+        run: |
+          set -euo pipefail
+          if command -v makeself >/dev/null 2>&1; then
+            MS="$(command -v makeself)"
+          else
+            MS="$RUNNER_TEMP/makeself/makeself.sh"
+          fi
+          mkdir -p out
+          python3 pm/tools/build_run.py \
+            --apk-dir release \
+            --out-dir out \
+            --slug "${GROUP_SLUG}" \
+            --label "${GROUP_LABEL}" \
+            --arch "${ARCH}" \
+            --version "${VERSION}" \
+            --makeself "$MS" \
+            --complevel 6
+
+      - name: Upload installer artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-run-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          path: out
+          if-no-files-found: warn
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ matrix.arch }}-${{ needs.prepare.outputs.version }}
+          path: logs
+          if-no-files-found: ignore
+
+  release:
+    name: Release ${{ matrix.arch }}
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.prepare.outputs.arches) }}
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apk-run-${{ matrix.arch }}-*
+          merge-multiple: true
+          path: assets
+
+      - name: List assets
+        run: find assets -maxdepth 3 -type f | sort
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ matrix.arch }}
+          name: APK ${{ matrix.arch }}
+          body: |
+            OpenWrt / iStoreOS apk 自解压安装包（由 Package_Manager 自动构建）
+
+            - 架构: `${{ matrix.arch }}`
+            - OpenWrt 版本: `${{ needs.prepare.outputs.version }}`
+            - 插件分组: `${{ inputs.group }}`
+
+            设备上以 root 执行即可安装：
+
+            ```sh
+            sh <文件名>.run
+            ```
+
+            也可以直接安装压缩包里的 apk：
+
+            ```sh
+            apk add --allow-untrusted <文件名>.apk
+            ```
+
+            这些 apk 由本地 SDK 构建、未签名，所以安装时需要 `--allow-untrusted`。
+          files: |
+            assets/**/*
+          fail_on_unmatched_files: false
+          overwrite_files: true
