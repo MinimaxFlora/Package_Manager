@@ -74,11 +74,24 @@
     "label": "PassWall 代理插件",
     "slug": "passwall",
     "targets": [
-      "luci-app-passwall",
       "chinadns-ng",
       "dns2socks",
+      "ipt2socks",
       "microsocks",
-      "tcping"
+      "tcping",
+      "xray-core",
+      "xray-plugin",
+      "sing-box",
+      "hysteria",
+      "naiveproxy",
+      "geoview",
+      "shadowsocks-rust",
+      "shadowsocksr-libev",
+      "shadow-tls",
+      "simple-obfs",
+      "v2ray-geodata",
+      "v2ray-plugin",
+      "luci-app-passwall",
     ]
   },
   {
@@ -86,10 +99,18 @@
     "label": "PassWall2 代理插件",
     "slug": "passwall2",
     "targets": [
-      "luci-app-passwall2",
+      "chinadns-ng",
       "tcping",
+      "xray-core",
+      "xray-plugin",
+      "sing-box",
       "geoview",
-      "v2ray-geodata"
+      "shadowsocks-rust",
+      "shadowsocksr-libev",
+      "simple-obfs",
+      "v2ray-geodata",
+      "v2ray-plugin",
+      "luci-app-passwall2",
     ]
   },
   {
