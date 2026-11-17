@@ -17,6 +17,7 @@
     GROUP_KEY=aurora
     GROUP_LABEL=Aurora 主题
     GROUP_SLUG=theme-aurora
+    GROUP_DROP_PKGS=sing-box-tiny      （互斥变体，打包前要丢掉）
 """
 import argparse
 import json
@@ -25,6 +26,11 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# 同一个构建目标编出来的互斥变体：sing-box 目标会同时产出 sing-box 和 sing-box-tiny
+# （sing-box-tiny PROVIDES sing-box 且两者 conflicts），打进同一个 .run 必然装不上。
+# 分组里可以用 "drop_pkgs": [...] 覆盖，写空数组表示不丢任何包。
+DEFAULT_DROP_PKGS = ["sing-box-tiny"]
 
 
 def known_targets(src):
@@ -70,11 +76,13 @@ def main():
         )
 
     deduped = list(dict.fromkeys(targets))
+    drop = entry.get("drop_pkgs", DEFAULT_DROP_PKGS)
     env = {
         "PACKAGES": " ".join(deduped),
         "GROUP_KEY": entry["key"],
         "GROUP_LABEL": entry["label"],
         "GROUP_SLUG": entry["slug"],
+        "GROUP_DROP_PKGS": " ".join(drop),
     }
 
     for key, value in env.items():

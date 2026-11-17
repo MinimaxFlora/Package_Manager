@@ -136,6 +136,7 @@ jobs:
           echo "Group   : ${GROUP_LABEL} (${GROUP_SLUG})"
           echo "Version : ${VERSION}"
           echo "Arch    : ${ARCH}"
+          echo "Drop    : ${GROUP_DROP_PKGS:-<none>}"
 
       - name: Build packages (apk only)
         uses: MinimaxFlora/gh-action-sdk@go1.27
@@ -155,6 +156,12 @@ jobs:
           fi
           # autocore 属于 nonshared，产物落在 bin/targets 下
           find bin/targets -type f -name 'autocore*.apk' -exec cp -v {} release/ \; 2>/dev/null || true
+          # 丢掉互斥变体（例如 sing-box 目标会顺带编出 sing-box-tiny，两者 conflicts，
+          # 同时打进一个 .run 必然装不上：apk 报 sing-box conflicts sing-box-tiny）
+          for p in ${GROUP_DROP_PKGS:-}; do
+            echo "丢弃互斥变体: ${p}"
+            rm -f release/"${p}"-*.apk
+          done
           count=$(find release -maxdepth 1 -type f -name '*.apk' | wc -l)
           echo "收集到 ${count} 个 apk"
           ls -lh release/ || true

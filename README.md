@@ -139,6 +139,7 @@ python3 tools/check-artifacts.py \
 - 目标系统需要 `apk`；OpenWrt 24.10 及更早版本使用 opkg，请改用 ipk。
 - Fluent 主题与 Fluent Lite 主题互斥，只能选其中一个分组安装。
 - 分组里的 LuCI 包通常是 `noarch`，可以跨架构安装；带二进制的插件必须匹配架构。
+- `sing-box` 构建目标会同时编出 `sing-box` 和 `sing-box-tiny`（后者 `PROVIDES sing-box`、两者 conflicts），打包时只保留 `sing-box`，`sing-box-tiny` 会被自动丢掉。
 - 安装时会从固件现有软件源补齐外部依赖（如 `luci-base`），请确保设备能访问软件源。
 - 代理插件分组已经把该插件自己需要的内核/依赖（xray、sing-box、hysteria 等）一起打进去了，不用另外再装内核。
 - PassWall、PassWall2、Nikki、HomeProxy、OpenClash 之间会抢端口和配置，一台设备只选一个。

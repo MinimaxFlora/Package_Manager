@@ -45,9 +45,12 @@ say "执行: apk add --allow-untrusted $*"
 if ! apk add --allow-untrusted "$@"; then
     say ""
     say "安装失败。常见原因："
-    say "  1. 安装包架构与设备不一致"
-    say "  2. 缺少外部依赖且软件源不可用，可先执行: apk update"
-    say "  3. 设备上已安装互斥的包（例如 Fluent 与 Fluent Lite）"
+    say "  1. 安装包架构与设备不一致（上面的提示里会显示设备真实架构）"
+    say "  2. 缺少外部依赖且设备访问不到软件源，可先执行: apk update"
+    say "  3. 设备上已装了互斥包，需要先删掉再装："
+    say "     - 代理插件需要 dnsmasq-full，固件自带 dnsmasq 时：apk del dnsmasq"
+    say "     - sing-box 与 sing-box-tiny 互斥：apk del sing-box-tiny（本安装包已自动剔除 tiny）"
+    say "     - Fluent 与 Fluent Lite 主题互斥，只能留一个"
     exit 1
 fi
 
