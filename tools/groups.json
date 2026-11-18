@@ -51,7 +51,9 @@
     "key": "openclash",
     "label": "OpenClash 代理插件",
     "slug": "openclash",
-    "targets": ["luci-app-openclash"]
+    "targets": ["luci-theme-design", "luci-app-openclash"],
+    "helper_targets": ["luci-theme-design"],
+    "drop_pkgs": ["sing-box-tiny", "luci-theme-design"]
   },
   {
     "key": "homeproxy",

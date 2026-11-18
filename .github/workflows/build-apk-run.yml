@@ -137,6 +137,7 @@ jobs:
           echo "Version : ${VERSION}"
           echo "Arch    : ${ARCH}"
           echo "Drop    : ${GROUP_DROP_PKGS:-<none>}"
+          echo "Check   : ${GROUP_CHECK_TARGETS:-$PACKAGES}"
 
       - name: Build packages (apk only)
         uses: MinimaxFlora/gh-action-sdk@go1.27
@@ -165,6 +166,14 @@ jobs:
           count=$(find release -maxdepth 1 -type f -name '*.apk' | wc -l)
           echo "收集到 ${count} 个 apk"
           ls -lh release/ || true
+          # 诊断：确认 apk 里有没有带上 .lmo 翻译
+          for f in release/*.apk; do
+            [ -f "$f" ] || continue
+            if tar tzf "$f" >/dev/null 2>&1; then
+              n=$(tar tzf "$f" | grep -c '\.lmo$' || true)
+              echo "  $(basename "$f"): lmo=${n}"
+            fi
+          done
           if [ "$count" -eq 0 ]; then
             echo "::error::没有产出任何 .apk。请确认版本 ${VERSION} 使用 apk（OpenWrt 25.12+），以及所选分组在该架构上可编译。"
             exit 1
@@ -177,7 +186,7 @@ jobs:
           python3 pm/tools/check-artifacts.py \
             --lock ./packages.lock.json \
             --apk-dir release \
-            --targets "$PACKAGES" || rc=$?
+            --targets "${GROUP_CHECK_TARGETS:-$PACKAGES}" || rc=$?
           if [ "$rc" -eq 1 ]; then
             echo "::error::所选分组有构建目标没有产出 apk，请查看 Build 步骤的编译日志"
             exit 1

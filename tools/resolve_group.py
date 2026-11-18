@@ -77,12 +77,16 @@ def main():
 
     deduped = list(dict.fromkeys(targets))
     drop = entry.get("drop_pkgs", DEFAULT_DROP_PKGS)
+    helpers = entry.get("helper_targets", [])
     env = {
         "PACKAGES": " ".join(deduped),
         "GROUP_KEY": entry["key"],
         "GROUP_LABEL": entry["label"],
         "GROUP_SLUG": entry["slug"],
         "GROUP_DROP_PKGS": " ".join(drop),
+        # helper_targets 只是为了把 luci-base/host（po2lmo）建出来，产物会被丢掉，
+        # 所以产物校验只针对真实目标
+        "GROUP_CHECK_TARGETS": " ".join(t for t in deduped if t not in helpers),
     }
 
     for key, value in env.items():
