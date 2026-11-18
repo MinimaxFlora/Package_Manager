@@ -74,8 +74,10 @@ jobs:
           if [ -n "${IN_VERSION}" ]; then
             V="${IN_VERSION}"
           else
+            # 自动取最新的 apk 系（25.x）：stable_version 是 25.x 就用它，否则从
+            # versions_list（按新旧排序）里挑第一个 25.x 正式版。OpenWrt 会定期发新版。
             V="$(curl -fsS --retry 3 --retry-delay 3 https://downloads.openwrt.org/.versions.json \
-                 | python3 -c 'import json,sys; print(json.load(sys.stdin)["stable_version"])')"
+                 | python3 -c "import json,re,sys; d=json.load(sys.stdin); print(next((v for v in [d.get('stable_version','')]+d.get('versions_list',[]) if re.fullmatch(r'25\.\d+\.\d+', v or '')), ''))")"
           fi
           if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::无效的 OpenWrt 版本: $V"
@@ -121,6 +123,18 @@ jobs:
         uses: actions/checkout@v7
         with:
           path: pm
+
+      - name: Apply DIY settings
+        run: |
+          set -euo pipefail
+          # 与 AutoSync/.github/diy/openwrt_package.sh 的「相关设置」保持一致。
+          # feed 里的包用相对路径 include，放到 feed 根目录后解析不到 luci.mk /
+          # golang-package.mk；luci.mk 没被 include 就不会登记 luci-base/host 依赖，
+          # po2lmo 也就不会被编出来（openclash 的 Build/Prepare 会 Error 127）。
+          sed -i 's#include ../../luci.mk#include $(TOPDIR)/feeds/luci/luci.mk#g' luci-theme-design/Makefile || true
+          sed -i 's#include ../../lang/golang/golang-package.mk#include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk#g' sing-box/Makefile || true
+          echo "luci-theme-design include -> $(grep -m1 luci.mk luci-theme-design/Makefile || echo '<none>')"
+          echo "sing-box golang include -> $(grep -m1 golang-package.mk sing-box/Makefile || echo '<none>')"
 
       - name: Resolve selected group
         run: |
